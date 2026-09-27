@@ -562,6 +562,21 @@ function sortHandymen() {
 // RENDER HANDYMEN
 // ======================================================
 
+function showBookingSuccessToast() {
+    const toast = document.getElementById("bookingSuccessToast");
+
+    if (!toast) {
+        return;
+    }
+
+    toast.classList.add("show");
+
+    clearTimeout(showBookingSuccessToast.timeoutId);
+    showBookingSuccessToast.timeoutId = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 4200);
+}
+
 function renderHandymen() {
 
     const grid =
@@ -579,166 +594,95 @@ function renderHandymen() {
         return;
     }
 
-    grid.innerHTML = "";
+    const currentIds = new Set(
+        handymanList
+            .filter(handyman => handyman && handyman.uid)
+            .map(handyman => handyman.uid)
+    );
+
+    grid.querySelectorAll("[data-handyman-id]").forEach(card => {
+        if (!currentIds.has(card.dataset.handymanId)) {
+            card.remove();
+        }
+    });
 
     if (!handymanList.length) {
+        grid.innerHTML = "";
         return;
     }
 
     handymanList.forEach(handyman => {
 
-        const name =
-            getHandymanName(handyman);
+        if (!handyman || !handyman.uid) {
+            return;
+        }
 
-        const service =
-            getHandymanService(handyman);
-
-        const rating =
-            Number(handyman.rating || 0);
-
-        const reviewCount =
-            Number(
-                handyman.reviewCount || 0
-            );
-
-        const online =
-            isHandymanOnline(handyman);
-
-        const verified =
-            isHandymanVerified(handyman);
-
+        const name = getHandymanName(handyman);
+        const service = getHandymanService(handyman);
+        const rating = Number(handyman.rating || 0);
+        const reviewCount = Number(handyman.reviewCount || 0);
+        const online = isHandymanOnline(handyman);
+        const verified = isHandymanVerified(handyman);
         const distance =
             handyman.distanceKm !== null &&
             handyman.distanceKm !== undefined
                 ? `${handyman.distanceKm.toFixed(1)} km`
                 : "Nearby";
+        const initials = getInitials(name);
 
-        const initials =
-            getInitials(name);
+        let card = grid.querySelector(`[data-handyman-id="${CSS.escape(handyman.uid)}"]`);
 
-        const card =
-            document.createElement("div");
+        if (!card) {
+            card = document.createElement("div");
+            card.className = "hd-handyman";
+            card.dataset.handymanId = handyman.uid;
+            grid.appendChild(card);
+        }
 
-        card.className =
-            "hd-handyman-card";
-
-        card.dataset.handymanId =
-            handyman.uid;
+        card.className = "hd-handyman";
+        card.dataset.handymanId = handyman.uid;
 
         card.innerHTML = `
-
-            <div class="hd-handyman-avatar">
-                ${
-                    handyman.photoURL ||
-                    handyman.profileImage ||
-                    handyman.photo
-                        ? `
-                            <img
-                                src="${escapeHTML(
-                                    handyman.photoURL ||
-                                    handyman.profileImage ||
-                                    handyman.photo
-                                )}"
-                                alt="${escapeHTML(name)}"
-                            >
-                          `
-                        : `
-                            <span>
-                                ${escapeHTML(initials)}
-                            </span>
-                          `
-                }
-
-                <span
-                    class="hd-online-dot ${
-                        online
-                            ? "online"
-                            : ""
-                    }"
-                ></span>
-            </div>
-
-            <div class="hd-handyman-info">
-
-                <div class="hd-handyman-name-row">
-
-                    <h3>
-                        ${escapeHTML(name)}
-                    </h3>
-
+            <div class="hd-handyman-top">
+                <div class="hd-handyman-avatar">
                     ${
-                        verified
+                        handyman.photoURL || handyman.profileImage || handyman.photo
                             ? `
-                                <span
-                                    class="hd-verified-badge"
-                                    title="Verified"
+                                <img
+                                    src="${escapeHTML(
+                                        handyman.photoURL ||
+                                        handyman.profileImage ||
+                                        handyman.photo
+                                    )}"
+                                    alt="${escapeHTML(name)}"
                                 >
-                                    ✓
-                                </span>
                               `
-                            : ""
+                            : `<span>${escapeHTML(initials)}</span>`
                     }
-
+                    <span class="hd-online-dot ${online ? "online" : ""}"></span>
                 </div>
 
-                <p class="hd-handyman-service">
-                    ${escapeHTML(service)}
-                </p>
-
-                <div class="hd-handyman-meta">
-
-                    <span>
-                        ★
-                        ${rating
-                            ? rating.toFixed(1)
-                            : "New"}
-                    </span>
-
-                    <span>
-                        ${
-                            reviewCount
-                                ? `(${reviewCount})`
-                                : "(No reviews)"
-                        }
-                    </span>
-
-                    <span>
-                        ${distance}
-                    </span>
-
+                <div class="hd-handyman-name">
+                    <strong>${escapeHTML(name)}</strong>
+                    <span>${escapeHTML(service)}</span>
+                    ${verified ? '<div class="hd-verified">✓ Verified</div>' : ""}
                 </div>
-
-                <div class="hd-handyman-status">
-
-                    ${
-                        online
-                            ? `
-                                <span>
-                                    Available
-                                </span>
-                              `
-                            : `
-                                <span>
-                                    Offline
-                                </span>
-                              `
-                    }
-
-                </div>
-
-                <button
-                    type="button"
-                    class="hd-select-handyman"
-                    data-handyman-id="${escapeHTML(handyman.uid)}"
-                >
-                    Book Handyman
-                </button>
-
             </div>
 
-        `;
+            <div class="hd-handyman-meta">
+                <span class="hd-rating">★ ${rating ? rating.toFixed(1) : "New"}</span>
+                <span>${reviewCount ? `(${reviewCount})` : "(No reviews)"}</span>
+                <span>${distance}</span>
+            </div>
 
-        grid.appendChild(card);
+            <button
+                type="button"
+                class="hd-book-handyman hd-select-handyman"
+                data-handyman-id="${escapeHTML(handyman.uid)}"
+            >
+                Book Now
+            </button>
+        `;
 
     });
 
@@ -1952,7 +1896,7 @@ async function submitBookingRequest() {
             bookingModal.classList.remove("active");
         }
 
-        alert("Your booking request has been sent to the handyman.");
+        showBookingSuccessToast();
 
         if (dateInput) dateInput.value = "";
         if (timeInput) timeInput.value = "";
@@ -1994,6 +1938,27 @@ function setupDashboardEvents() {
         document.querySelector(
             "#bookingService"
         );
+
+    const attachPhotoButton = document.querySelector("#attachPhotoButton");
+    const photoInput = document.querySelector("#bookingPhotoInput");
+
+    if (attachPhotoButton && photoInput) {
+        attachPhotoButton.addEventListener("click", () => {
+            photoInput.click();
+        });
+
+        photoInput.addEventListener("change", () => {
+            const file = photoInput.files && photoInput.files[0];
+
+            if (file) {
+                const fileLabel = file.name.length > 28
+                    ? `${file.name.slice(0, 25)}...`
+                    : file.name;
+
+                attachPhotoButton.textContent = fileLabel;
+            }
+        });
+    }
 
     if (serviceSelect) {
 
