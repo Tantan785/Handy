@@ -1396,6 +1396,8 @@
         .hd-profile-menu {
             position: fixed;
             z-index: 2000;
+            top: 80px;
+            right: max(16px, calc((100vw - min(1400px, calc(100% - 48px))) / 2));
 
             width: 260px;
 
@@ -1518,6 +1520,12 @@
         @media (max-width: 700px) {
             .hd-nav {
                 height: 68px;
+            }
+
+            .hd-profile-menu {
+                top: 62px;
+                right: 12px;
+                width: min(280px, calc(100vw - 24px));
             }
 
             .hd-nav-inner {
@@ -1980,7 +1988,7 @@
          MAIN DASHBOARD
     ========================================================== -->
 
-    <main class="hd-main">
+    <main class="hd-main" id="top">
 
         <!-- Greeting -->
         <section class="hd-greeting">
@@ -3310,9 +3318,37 @@
 
         document.addEventListener('click', function (event) {
             const profileButton = event.target.closest('#profileButton');
+            const menu = document.getElementById('profileMenu');
+
             if (profileButton) {
-                const menu = document.getElementById('profileMenu');
-                if (menu) menu.classList.toggle('active');
+                if (menu) {
+                    menu.classList.toggle('active');
+                }
+                return;
+            }
+
+            if (menu && !event.target.closest('#profileMenu') && !event.target.closest('#profileButton')) {
+                menu.classList.remove('active');
+            }
+
+            const mobileButton = event.target.closest('[data-mobile-target]');
+            if (mobileButton) {
+                const targetId = mobileButton.dataset.mobileTarget;
+                const target = targetId === 'top' ? document.getElementById('top') : document.getElementById(targetId);
+
+                document.querySelectorAll('.hd-mobile-nav button').forEach(button => {
+                    button.classList.toggle('active', button === mobileButton);
+                });
+
+                if (target) {
+                    const offset = window.innerWidth <= 700 ? 90 : 120;
+                    const targetTop = target.getBoundingClientRect().top + window.scrollY - offset;
+                    window.scrollTo({ top: targetTop, behavior: 'smooth' });
+                } else if (targetId === 'top') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+
+                return;
             }
 
             const bookHandymanButton = event.target.closest('.hd-select-handyman');
